@@ -1,0 +1,25 @@
+[
+  {
+    "name": "official-fabric-docs",
+    "description": "Official Fabric developer documentation for Minecraft 1.21.11 cloned locally and indexed as the only searchable knowledge source.",
+    "mode": "git-repo",
+    "sourceKind": "official-fabric",
+    "trustRank": 100,
+    "loader": "fabric",
+    "localPath": "docs/.sources/fabric-docs",
+    "contentSubpath": "versions/1.21.11/develop",
+    "repoUrl": "https://github.com/FabricMC/fabric-docs.git",
+    "branch": "main",
+    "versionScope": "1.21.11",
+    "topicHints": [
+      "fabric",
+      "registration",
+      "events",
+      "networking",
+      "screen",
+      "mixin",
+      "loom"
+    ],
+    "enabled": true
+  }
+]

@@ -1,0 +1,379 @@
+Product
+  Bytecode is a chat-first web app for building Minecraft Fabric mods inside an E2B sandbox. The user creates a project, chats with the agent, the agent reads guides/docs/references, writes files directly into the sandbox workspace, and only compiles when the user
+  clicks Compile. Plugins are out of scope initially.
+
+  Core principles
+
+  - The sandbox is the real filesystem.
+  - The model never “owns” project state; the backend does.
+  - Retrieval is mandatory for API-sensitive generation.
+  - The frontend is minimal: project setup, chat, tool indicators, compile, download.
+  - The starter mod comes from the sandbox template, not from local codegen pretending to be the source of truth.
+  - docs/ is a curated guides corpus, not random markdown.
+  - The two MCP repos are implementation references to absorb, not product surfaces to expose wholesale.
+
+  Fresh repo structure
+
+  bytecode/
+    apps/
+      web/
+    packages/
+      agent-core/
+      docs-engine/
+      sandbox-runtime/
+      template-builder/
+      shared/
+    docs/
+    upstream/
+      mcmodding-mcp/
+      minecraft-dev-mcp/
+    e2b/
+
+  What each area does
+
+  - apps/web
+      - Next.js app
+      - minimal product UI
+      - server routes
+      - no landing page
+  - packages/agent-core
+      - AI SDK orchestration
+      - prompt construction
+      - tool registration
+      - structured generation outputs
+  - packages/docs-engine
+      - load docs/
+      - ingest synced docs later
+      - absorb useful retrieval logic from the two MCP repos
+      - expose a small internal tool interface
+  - packages/sandbox-runtime
+      - create/connect to E2B sandboxes
+      - read/write files
+      - compile project
+      - download jar
+      - enforce safe path handling
+  - packages/template-builder
+      - E2B v2 template definition
+      - publish/build scripts
+  - packages/shared
+      - shared types
+      - schemas
+      - project/message/compile DTOs
+  - docs/
+      - your modding guides
+      - patterns, conventions, instructions, examples
+  - upstream/mcmodding-mcp
+      - reference source for docs/retrieval/indexing ideas
+  - upstream/minecraft-dev-mcp
+      - reference source for source-analysis/symbol/mixin logic
+  - e2b/
+      - template package env and scripts if you want it isolated from app code
+
+  User flow
+
+  1. User opens app.
+  2. User creates a mod project with:
+      - Minecraft version
+      - mod id
+      - mod name
+      - package name
+      - description
+  3. Backend creates a sandbox from your published E2B template.
+  4. Sandbox starts with the Fabric example mod already cloned into /workspace.
+  5. Backend persists project metadata:
+      - project id
+      - sandbox id
+      - project root path
+      - chat history
+      - compile status
+  6. User sends a prompt.
+  7. Backend gathers relevant context:
+      - selected project metadata
+      - current files from sandbox
+      - matching guides from docs/
+      - matching references/examples
+      - symbols/source context when needed
+  8. Model returns:
+      - assistant explanation
+      - file writes/rewrites
+      - optional reasons for changed files
+  9. Backend writes files to sandbox.
+  10. UI refreshes chat + changed files + tool indicators.
+  11. User clicks Compile.
+  12. Backend runs Gradle in sandbox.
+  13. Backend stores logs and jar path.
+  14. User downloads jar.
+
+  Sandbox model
+
+  - E2B template contains:
+      - Linux base
+      - Java
+      - Gradle-capable environment
+      - starter example mod cloned into /workspace
+  - Project root is always /workspace
+  - The app should not upload a fake starter project first
+  - The agent edits /workspace directly
+  - Compile runs from /workspace
+
+  Why this matters
+  If the template already contains the starter project, the backend only has to mutate real files. That eliminates mismatch between “preview starter” and “actual build starter”.
+
+  Internal tool surface
+  Keep it intentionally small.
+
+  - list_docs
+      - search your guides in docs/
+      - later include synced docs too
+  - read_docs
+      - read a full guide or a chunk
+  - list_refer_mod
+      - search curated mod/plugin/API examples
+  - read_refer_mod
+      - read selected reference entry
+  - search_minecraft_symbols
+      - search class/method/symbol catalog
+  - get_class_source
+      - return class/source snippet when needed
+  - analyze_mixin
+      - review mixin structure and likely mistakes
+
+  Everything else from the MCP repos stays internal unless it proves necessary.
+
+  How to use the two MCP repos
+  Do not “adopt” them directly.
+
+  From mcmodding-mcp, absorb:
+
+  - doc indexing ideas
+  - concept/example retrieval
+  - ranking/chunking strategy
+  - mappings/reference lookup ideas if useful
+
+  From minecraft-dev-mcp, absorb:
+
+  - symbol/source lookup ideas
+  - decompile/source access patterns
+  - mixin validation logic
+  - version-aware source analysis
+
+  Then re-expose only Bytecode’s smaller internal tools.
+
+  Docs strategy
+  Treat docs/ as guide-first authoritative content.
+  Each guide should become indexed units with metadata:
+
+  - id
+  - title
+  - section heading
+  - tags
+  - loader
+  - minecraft version if applicable
+  - source type = guide
+  - content
+
+  Later, add synced official docs and tag them separately:
+
+  - source type = synced-doc
+
+  References are separate from guides:
+
+  - source type = refer-mod
+
+  Frontend plan
+  Minimal, chat-first, no landing page.
+
+  Left column:
+
+  - create/select project
+  - project metadata
+  - compile button
+  - download button
+  - compile status
+
+  Main column:
+
+  - message list
+  - each assistant message shows:
+      - plain answer
+      - tools used
+      - changed files
+  - composer textarea
+  - compile logs panel
+
+  No fake dashboards.
+  No marketing sections.
+  No multi-tab complexity unless actually needed.
+
+  Backend route plan
+
+  - POST /api/projects
+      - create sandbox-backed project
+  - GET /api/projects
+      - list existing projects
+  - GET /api/projects/:id
+      - fetch project state
+  - POST /api/projects/:id/message
+      - run retrieval + generation + file writes
+  - POST /api/projects/:id/compile
+      - run Gradle build
+  - GET /api/projects/:id/artifact
+      - stream jar download
+
+  All routes must be Node runtime.
+
+  Persistence plan
+  Use a simple database from day one.
+  Do not rely on in-memory state.
+
+  Minimum entities:
+
+  - projects
+      - id
+      - sandbox_id
+      - root_path
+      - mod metadata
+      - created_at
+      - updated_at
+  - messages
+      - id
+      - project_id
+      - role
+      - content
+      - tool_events json
+      - file_changes json
+      - created_at
+  - compilations
+      - id
+      - project_id
+      - status
+      - stdout
+      - stderr
+      - jar_path
+      - created_at
+
+  SQLite is fine for local-first implementation.
+  Later migrate if needed.
+
+  Agent generation contract
+  Never ask the model to output arbitrary prose-only coding decisions.
+  Use structured output.
+
+  Model response should contain:
+
+  - assistant message
+  - files to write:
+      - path
+      - purpose
+      - content
+
+  The backend decides:
+
+  - which files to read
+  - which tools to call
+  - where to write
+  - when to compile
+
+  Generation logic
+  For each prompt:
+
+  1. Load project metadata.
+  2. Read a selected set of files from sandbox.
+  3. Retrieve relevant guides/docs/references.
+  4. Retrieve symbol/source context if prompt touches APIs or internals.
+  5. Build prompt context.
+  6. Ask model for structured file updates.
+  7. Validate paths.
+  8. Write files.
+  9. Save assistant response with tool/file metadata.
+
+  Compile logic
+
+  - Run chmod +x gradlew || true
+  - Ensure wrapper exists if needed
+  - Run ./gradlew build --stacktrace
+  - Find jar in build/libs
+  - Exclude sources/javadoc jars
+  - Save status and logs
+  - Expose artifact download route
+
+  Security and safety
+
+  - Reject paths containing ..
+  - Reject absolute user/model file paths
+  - Only write under /workspace
+  - Do not let the model run shell commands
+  - Do not expose provider keys to frontend
+  - Do not use AI SDK in the frontend
+  - Only server-side AI calls
+
+  Config
+  Root .env should support:
+
+  - OPENAI_API_KEY
+  - OPENAI_BASE_URL
+  - OPENAI_MODEL
+  - E2B_API_KEY
+  - BYTECODE_E2B_TEMPLATE_ID
+
+  Template package .env only needs:
+
+  - E2B_API_KEY
+
+  Tech choices
+
+  - Next.js app router
+  - TypeScript everywhere
+  - AI SDK on server only
+  - OpenAI-compatible provider config
+  - E2B JS SDK
+  - SQLite for persistence
+  - Zod for schemas/validation
+
+  Phased build order
+
+  1. Create E2B template package and verify /workspace contains starter mod.
+  2. Create sandbox runtime package and verify:
+      - create sandbox
+      - connect sandbox
+      - list /workspace
+      - write file
+      - compile
+      - download jar
+  3. Create shared types and schemas.
+  4. Create persistent database/store.
+  5. Create docs engine for docs/ guides.
+  6. Clone both MCP repos into upstream/.
+  7. Absorb retrieval and symbol-analysis logic selectively.
+  8. Create agent-core using AI SDK and internal tools.
+  9. Build minimal API routes.
+  10. Build minimal chat UI.
+  11. Run end-to-end test against real E2B template and provider.
+  12. Only after mod flow is stable, consider plugins.
+
+  Definition of done
+
+  - project creation creates a real E2B sandbox
+  - /workspace contains starter Fabric mod
+  - prompt updates files in sandbox
+  - UI shows tool calls and changed files
+  - compile works on button click
+  - jar download works
+  - project state persists across reloads
+  - docs retrieval is integrated
+  - no fake starter-upload flow remains
+
+  Most important mistakes to avoid
+
+  - building UI before sandbox/session model is correct
+  - using local generated starter instead of template /workspace
+  - treating MCP repos as the final tool surface
+  - mixing plugin support too early
+  - letting the model control shell execution
+  - keeping project state only in memory
+
+
+
+mcp's repo:
+https://github.com/MCDxAI/minecraft-dev-mcp
+https://github.com/OGMatrix/mcmodding-mcp 

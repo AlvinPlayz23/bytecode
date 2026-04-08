@@ -1,0 +1,5 @@
+# E2B template configuration
+# Run `e2b template build` to build and publish
+template_id = ""
+dockerfile = "e2b.Dockerfile"
+template_name = "bytecode-fabric"

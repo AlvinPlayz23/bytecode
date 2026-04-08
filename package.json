@@ -1,0 +1,14 @@
+{
+  "name": "bytecode",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "db:migrate": "pnpm --filter web db:migrate",
+    "docs:sync": "node packages/docs-engine/sync.mjs",
+    "docs:rebuild": "node packages/docs-engine/sync.mjs --skip-sync"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
