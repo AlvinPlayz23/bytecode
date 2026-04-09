@@ -36,6 +36,12 @@ export async function ensureMigrated(): Promise<void> {
   );
   await ensureColumn(
     db,
+    "projects",
+    "sandbox_timeout_minutes",
+    "INTEGER"
+  );
+  await ensureColumn(
+    db,
     "messages",
     "reasoning",
     "TEXT NOT NULL DEFAULT ''"

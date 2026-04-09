@@ -41,6 +41,12 @@ export async function GET(
       sandboxId: row.sandbox_id,
       rootPath: row.root_path,
       provider: row.provider ?? "openrouter",
+      sandboxTimeoutMinutes:
+        typeof row.sandbox_timeout_minutes === "number"
+          ? row.sandbox_timeout_minutes
+          : row.sandbox_timeout_minutes == null
+          ? null
+          : Number(row.sandbox_timeout_minutes),
       metadata: {
         minecraftVersion: row.minecraft_version,
         modId: row.mod_id,

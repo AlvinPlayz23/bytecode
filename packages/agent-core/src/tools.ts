@@ -330,5 +330,41 @@ export function createAgentTools(deps: ToolDeps) {
         return { path, success: true, bytesWritten: content.length };
       },
     }),
+
+    run_bash: tool({
+      description:
+        "Execute a bash command inside the Linux sandbox. Use this for shell-based inspection, search, build, or verification work. The working directory defaults to /workspace.",
+      inputSchema: z.object({
+        command: z.string().min(1).describe("Bash command to execute"),
+        cwd: z
+          .string()
+          .default("/workspace")
+          .describe("Working directory inside the sandbox"),
+        timeoutMs: z
+          .number()
+          .int()
+          .positive()
+          .max(600_000)
+          .default(60_000)
+          .describe("Command timeout in milliseconds"),
+      }),
+      execute: async ({ command, cwd, timeoutMs }) => {
+        try {
+          return await deps.sandbox.runBash(command, { cwd, timeoutMs });
+        } catch (error) {
+          return {
+            command,
+            cwd,
+            exitCode: -1,
+            stdout: "",
+            stderr: "",
+            error:
+              error instanceof Error
+                ? error.message
+                : "Bash command failed",
+          };
+        }
+      },
+    }),
   };
 }

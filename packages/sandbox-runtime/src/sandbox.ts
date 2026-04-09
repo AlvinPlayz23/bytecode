@@ -1,11 +1,26 @@
 import { Sandbox } from "e2b";
 import { pathUtils } from "./paths";
 
+const DEFAULT_SANDBOX_TIMEOUT_MINUTES = 10;
+const DEFAULT_COMMAND_TIMEOUT_MS = 60_000;
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\"'\"'`)}'`;
+}
+
 export interface CompileResult {
   success: boolean;
   stdout: string;
   stderr: string;
   jarPath: string | null;
+}
+
+export interface BashCommandResult {
+  command: string;
+  cwd: string;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
 }
 
 export class SandboxManager {
@@ -16,8 +31,12 @@ export class SandboxManager {
   }
 
   /** Create a new sandbox from the Bytecode E2B template */
-  static async create(templateId: string): Promise<SandboxManager> {
-    const sandbox = await Sandbox.create(templateId, { timeoutMs: 600_000 });
+  static async create(
+    templateId: string,
+    sandboxTimeoutMinutes: number = DEFAULT_SANDBOX_TIMEOUT_MINUTES
+  ): Promise<SandboxManager> {
+    const timeoutMs = sandboxTimeoutMinutes * 60_000;
+    const sandbox = await Sandbox.create(templateId, { timeoutMs });
     return new SandboxManager(sandbox);
   }
 
@@ -53,6 +72,30 @@ export class SandboxManager {
       await this.sandbox.commands.run(`mkdir -p ${dir}`);
     }
     await this.sandbox.files.write(safePath, content);
+  }
+
+  /** Run a bash command inside the sandbox with /workspace-scoped cwd by default */
+  async runBash(
+    command: string,
+    opts?: { cwd?: string; timeoutMs?: number; envs?: Record<string, string> }
+  ): Promise<BashCommandResult> {
+    const cwd = pathUtils.resolve(opts?.cwd ?? pathUtils.PROJECT_ROOT);
+    const result = await this.sandbox.commands.run(
+      `bash -lc ${shellQuote(command)}`,
+      {
+        cwd,
+        envs: opts?.envs,
+        timeoutMs: opts?.timeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS,
+      }
+    );
+
+    return {
+      command,
+      cwd,
+      exitCode: result.exitCode,
+      stdout: result.stdout,
+      stderr: result.stderr,
+    };
   }
 
   /** Compile the Fabric mod via Gradle */

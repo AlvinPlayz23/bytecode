@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import { getDb, ensureMigrated } from "@/lib/db";
 import {
   createProjectSchema,
+  DEFAULT_SANDBOX_TIMEOUT_MINUTES,
   FABRIC_TARGET_MINECRAFT_VERSION,
 } from "@bytecode/shared";
 import { SandboxManager } from "@bytecode/sandbox-runtime";
@@ -24,13 +25,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const sandbox = await SandboxManager.create(env.e2bTemplateId);
+    const sandbox = await SandboxManager.create(
+      env.e2bTemplateId,
+      parsed.sandboxTimeoutMinutes ?? DEFAULT_SANDBOX_TIMEOUT_MINUTES
+    );
     const id = nanoid();
     const db = getDb();
 
     await db.execute({
-      sql: `INSERT INTO projects (id, sandbox_id, root_path, minecraft_version, mod_id, mod_name, package_name, description, provider)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO projects (id, sandbox_id, root_path, minecraft_version, mod_id, mod_name, package_name, description, provider, sandbox_timeout_minutes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         id,
         sandbox.sandboxId,
@@ -41,6 +45,7 @@ export async function POST(request: Request) {
         parsed.metadata.packageName,
         parsed.metadata.description,
         parsed.provider,
+        parsed.sandboxTimeoutMinutes ?? null,
       ],
     });
 
@@ -72,6 +77,12 @@ function formatProject(row: Record<string, unknown>) {
     sandboxId: row.sandbox_id,
     rootPath: row.root_path,
     provider: row.provider ?? "openrouter",
+    sandboxTimeoutMinutes:
+      typeof row.sandbox_timeout_minutes === "number"
+        ? row.sandbox_timeout_minutes
+        : row.sandbox_timeout_minutes == null
+        ? null
+        : Number(row.sandbox_timeout_minutes),
     metadata: {
       minecraftVersion: row.minecraft_version,
       modId: row.mod_id,

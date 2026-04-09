@@ -7,7 +7,10 @@ import type {
   ModelProvider,
   Project,
 } from "@bytecode/shared";
-import { FABRIC_TARGET_MINECRAFT_VERSION as FIXED_MC_VERSION } from "@bytecode/shared";
+import {
+  DEFAULT_SANDBOX_TIMEOUT_MINUTES,
+  FABRIC_TARGET_MINECRAFT_VERSION as FIXED_MC_VERSION,
+} from "@bytecode/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -90,12 +93,17 @@ export function Sidebar({
     modName: "",
     packageName: "",
     description: "",
+    sandboxTimeoutMinutes: "",
   });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     onCreateProject({
       provider: form.provider,
+      sandboxTimeoutMinutes:
+        form.sandboxTimeoutMinutes.trim() === ""
+          ? undefined
+          : Number(form.sandboxTimeoutMinutes),
       metadata: {
         modId: form.modId,
         modName: form.modName,
@@ -110,6 +118,7 @@ export function Sidebar({
       modName: "",
       packageName: "",
       description: "",
+      sandboxTimeoutMinutes: "",
     });
   }
 
@@ -262,6 +271,25 @@ export function Sidebar({
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               className="h-8 text-xs"
             />
+            <div className="space-y-1">
+              <Input
+                type="number"
+                min={1}
+                max={1440}
+                step={1}
+                inputMode="numeric"
+                placeholder={`Sandbox Timeout Minutes (optional, default ${DEFAULT_SANDBOX_TIMEOUT_MINUTES})`}
+                value={form.sandboxTimeoutMinutes}
+                onChange={(e) =>
+                  setForm({ ...form, sandboxTimeoutMinutes: e.target.value })
+                }
+                className="h-8 text-xs"
+              />
+              <p className="px-0.5 text-[10px] text-muted-foreground">
+                Optional. Enter minutes only. Leave blank to use the default timeout of{" "}
+                {DEFAULT_SANDBOX_TIMEOUT_MINUTES} minutes.
+              </p>
+            </div>
             <Button
               type="submit"
               disabled={loading}

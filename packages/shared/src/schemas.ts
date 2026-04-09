@@ -2,6 +2,7 @@ import { z } from "zod";
 
 // ── Project ──────────────────────────────────────────────
 export const FABRIC_TARGET_MINECRAFT_VERSION = "1.21.11" as const;
+export const DEFAULT_SANDBOX_TIMEOUT_MINUTES = 10 as const;
 
 export const modelProviderSchema = z.enum([
   "openrouter",
@@ -27,6 +28,7 @@ export const createProjectMetadataSchema = z.object({
 export const createProjectSchema = z.object({
   metadata: createProjectMetadataSchema,
   provider: modelProviderSchema.default("openrouter"),
+  sandboxTimeoutMinutes: z.number().int().positive().max(1440).optional(),
 });
 
 export const projectSchema = z.object({
@@ -34,6 +36,7 @@ export const projectSchema = z.object({
   sandboxId: z.string(),
   rootPath: z.string().default("/workspace"),
   provider: modelProviderSchema.default("openrouter"),
+  sandboxTimeoutMinutes: z.number().int().positive().nullable().default(null),
   metadata: modMetadataSchema,
   createdAt: z.string(),
   updatedAt: z.string(),

@@ -72,6 +72,7 @@ const TOOL_INFO: Record<string, { icon: typeof Search; label: string }> = {
   list_files: { icon: FolderOpen, label: "Listing files" },
   read_file: { icon: FileText, label: "Reading file" },
   write_file: { icon: Pencil, label: "Writing file" },
+  run_bash: { icon: Terminal, label: "Running bash" },
 };
 
 export function Chat({

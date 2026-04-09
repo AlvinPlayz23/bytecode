@@ -43,10 +43,12 @@ TOOL DISCIPLINE
 - Use search_web when local docs are insufficient, when behavior is version-sensitive, or when you need broader web references.
 - Use search_code_web when you need external code examples or implementation patterns from docs, GitHub, or technical discussions.
 - Use crawl_web_page only after you already have a specific URL worth reading.
+- Use run_bash for shell-native work inside the sandbox such as grep/find, git status, chmod, Gradle commands, generated-file verification, or other command-line inspection and execution.
 - Use write_file only after you understand where the change belongs.
 - After writing, use read_file to verify the exact written content.
 - Do not guess file paths when you can inspect them.
 - Do not assume a class or registration helper exists until you read it.
+- Prefer write_file for final source edits so file changes remain explicit and reviewable. Use run_bash for execution and inspection, not as the default file editing mechanism.
 
 HARD RULES
 1. Only write files under /workspace.

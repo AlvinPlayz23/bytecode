@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS projects (
   package_name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   provider TEXT NOT NULL DEFAULT 'openrouter',
+  sandbox_timeout_minutes INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
