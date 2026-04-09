@@ -9,6 +9,7 @@
     "@ai-sdk/google": "^3.0.60",
     "@ai-sdk/openai": "^3.0.51",
     "@bytecode/docs-engine": "workspace:*",
+    "@bytecode/minecraft-analysis": "workspace:*",
     "@bytecode/sandbox-runtime": "workspace:*",
     "@bytecode/shared": "workspace:*",
     "@openrouter/ai-sdk-provider": "^1.2.0",

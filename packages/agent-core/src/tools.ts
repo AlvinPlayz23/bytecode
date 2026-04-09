@@ -1,6 +1,10 @@
 import { tool } from "ai";
 import { z } from "zod";
 import type { DocsEngine } from "@bytecode/docs-engine";
+import {
+  getMinecraftAnalysisService,
+  type MappingType,
+} from "@bytecode/minecraft-analysis";
 import type { SandboxManager } from "@bytecode/sandbox-runtime";
 import { callExaMcp } from "./exa";
 
@@ -11,6 +15,8 @@ export interface ToolDeps {
 }
 
 export function createAgentTools(deps: ToolDeps) {
+  const minecraft = getMinecraftAnalysisService();
+
   return {
     search_docs: tool({
       description:
@@ -73,6 +79,140 @@ export function createAgentTools(deps: ToolDeps) {
           versionScope: entry.versionScope,
           content: entry.content,
         };
+      },
+    }),
+
+    get_minecraft_source: tool({
+      description:
+        "Read decompiled Minecraft 1.21.11 source in official Mojang mappings for a vanilla class. Use this when local Fabric docs are not enough and you need to inspect actual game code.",
+      inputSchema: z.object({
+        className: z
+          .string()
+          .describe(
+            "Fully qualified Mojang-mapped class name, for example net.minecraft.world.level.block.Block"
+          ),
+        startLine: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("Optional 1-based start line for slicing the returned source"),
+        endLine: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("Optional 1-based end line for slicing the returned source"),
+        maxLines: z
+          .number()
+          .int()
+          .positive()
+          .max(400)
+          .default(200)
+          .describe("Maximum number of source lines to return"),
+      }),
+      execute: async ({ className, startLine, endLine, maxLines }) => {
+        try {
+          const result = await minecraft.getMinecraftSource(className);
+          const lines = result.content.split(/\r?\n/);
+          const start = Math.max(1, startLine ?? 1);
+          const boundedEnd = endLine
+            ? Math.max(start, endLine)
+            : Math.min(lines.length, start + maxLines - 1);
+          const end = Math.min(lines.length, boundedEnd, start + maxLines - 1);
+          const sliced = lines.slice(start - 1, end);
+
+          return {
+            version: result.version,
+            mapping: result.mapping,
+            className: result.className,
+            startLine: start,
+            endLine: end,
+            content: sliced.join("\n"),
+          };
+        } catch (error) {
+          return {
+            className,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to load Minecraft source",
+          };
+        }
+      },
+    }),
+
+    find_mapping: tool({
+      description:
+        "Translate a Minecraft symbol from official, intermediary, Yarn, or Mojang naming into Mojang mappings for Minecraft 1.21.11.",
+      inputSchema: z.object({
+        symbol: z.string().min(1).describe("Class, method, or field symbol to resolve"),
+        sourceMapping: z
+          .enum(["official", "intermediary", "yarn", "mojmap"])
+          .default("official")
+          .describe("The namespace the provided symbol currently uses"),
+      }),
+      execute: async ({
+        symbol,
+        sourceMapping,
+      }: {
+        symbol: string;
+        sourceMapping: MappingType;
+      }) => {
+        try {
+          return await minecraft.findMapping(symbol, sourceMapping);
+        } catch (error) {
+          return {
+            symbol,
+            sourceMapping,
+            targetMapping: "mojmap",
+            error:
+              error instanceof Error ? error.message : "Failed to resolve mapping",
+          };
+        }
+      },
+    }),
+
+    analyze_mixin: tool({
+      description:
+        "Validate a Fabric Mixin source snippet against Minecraft 1.21.11 Yarn mappings and report likely target or injection issues.",
+      inputSchema: z.object({
+        source: z.string().min(1).describe("Full Java source of the mixin class"),
+      }),
+      execute: async ({ source }) => {
+        try {
+          return await minecraft.analyzeMixin(source);
+        } catch (error) {
+          return {
+            isValid: false,
+            error:
+              error instanceof Error ? error.message : "Failed to analyze mixin",
+          };
+        }
+      },
+    }),
+
+    validate_access_widener: tool({
+      description:
+        "Validate an access widener file for Minecraft 1.21.11 Yarn mappings and report invalid or suspicious entries.",
+      inputSchema: z.object({
+        content: z
+          .string()
+          .min(1)
+          .describe("Full access widener file contents"),
+      }),
+      execute: async ({ content }) => {
+        try {
+          return await minecraft.validateAccessWidener(content);
+        } catch (error) {
+          return {
+            isValid: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to validate access widener",
+          };
+        }
       },
     }),
 

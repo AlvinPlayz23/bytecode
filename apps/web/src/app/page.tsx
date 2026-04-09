@@ -108,8 +108,11 @@ export default function Home() {
             compilation={activeProject.compilation}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-[var(--muted)]">
-            <p>Select or create a project to get started</p>
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+            <div className="size-10 rounded-xl bg-muted/50 flex items-center justify-center">
+              <span className="font-mono text-lg text-muted-foreground/50">{">"}_</span>
+            </div>
+            <p className="text-sm">Select or create a project to get started</p>
           </div>
         )}
       </main>

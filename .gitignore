@@ -32,6 +32,9 @@ coverage/
 docs/.sources/
 docs/.generated/
 
+# Internal analysis cache
+.bytecode-cache/
+
 # Logs
 *.log
 npm-debug.log*
